@@ -3,6 +3,18 @@
   <p><strong>Simple Talis database commands.</strong></p>
 </div>
 
+## About
+
+1. **All traffic to and from servers is encrypted** with native TLS implemented by:
+
+   - Schannel on Windows
+   - Secure Transport on macOS
+   - OpenSSL on other platforms
+
+2. No network connections are made until after queries are checked at runtime.
+
+3. No database connections are pooled because the lifetime of this application begins and ends on the command line.
+
 ## Help
 
 ```sh

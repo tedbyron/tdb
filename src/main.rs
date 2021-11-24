@@ -15,8 +15,14 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::time;
 use tracing_subscriber::EnvFilter;
 
-#[tokio::main]
+use util::{OkOrExit, Result};
+
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
+    run().await.or_exit(1);
+}
+
+async fn run() -> Result<()> {
     // Default to tracing `LEVEL::WARN`.
     if env::var("TDB_LOG").is_err() {
         env::set_var("TDB_LOG", "WARN");
@@ -43,7 +49,7 @@ async fn main() {
 
     // Load the config file into a buffer and deserialize it.
     let mut buf = String::with_capacity(2_048);
-    let cfg = config::load("tdb.toml", &mut buf);
+    let cfg = config::load("tdb.toml", &mut buf)?;
 
     // Create the CLI app.
     let span = tracing::debug_span!("build_app").entered();
@@ -99,26 +105,23 @@ async fn main() {
                     Arg::new(db::ARG_NAMES[0])
                         .about("The database to use")
                         .takes_value(true)
-                        .required(true)
-                        .index(1),
+                        .required(true),
                     Arg::new(db::ARG_NAMES[1])
                         .about("The operation to perform")
                         .required(true)
                         .takes_value(true)
                         .case_insensitive(true)
-                        .possible_values(db::OPS)
-                        .index(2),
+                        .possible_values(db::OPS),
                     Arg::new(db::ARG_NAMES[2])
                         .about("The table to operate on")
                         .required(true)
-                        .takes_value(true)
-                        .index(3),
-                    Arg::new("where")
+                        .takes_value(true),
+                    Arg::new("WHERE")
                         .about("A WHERE clause")
                         .short('w')
                         .long("where")
                         .takes_value(true),
-                    Arg::new("set")
+                    Arg::new("SET")
                         .about("A SET clause")
                         .short('s')
                         .long("set")
@@ -146,4 +149,6 @@ async fn main() {
             .await;
         }
     }
+
+    Ok(())
 }

@@ -6,7 +6,7 @@ use std::io::Read;
 
 use serde::Deserialize;
 
-use crate::util::OkOrExit;
+use crate::util;
 
 /// Representation of a `tdb` config file.
 #[derive(Debug, Deserialize)]
@@ -70,15 +70,15 @@ pub struct StaffBadges<'a> {
 /// Load a config file from the current directory into a buffer and return the deserialized
 /// [`Config`].
 #[tracing::instrument(name = "config", level = "debug", skip_all, fields(file = file_name))]
-pub fn load<'a>(file_name: &str, buf: &'a mut String) -> Config<'a> {
-    let mut file = fs::File::open(file_name).or_exit(1);
-    let len = file.read_to_string(buf).or_exit(1);
-    let cfg: Config = toml::from_str(buf).or_exit(1);
+pub fn load<'a>(file_name: &str, buf: &'a mut String) -> util::Result<Config<'a>> {
+    let mut file = fs::File::open(file_name)?;
+    let len = file.read_to_string(buf)?;
+    let cfg: Config = toml::from_str(buf)?;
 
     tracing::debug!("buf.capacity()={}", buf.capacity());
     tracing::debug!("file.len()={}", len);
     tracing::trace!(?cfg);
     tracing::info!("{} loaded", file_name);
 
-    cfg
+    Ok(cfg)
 }
