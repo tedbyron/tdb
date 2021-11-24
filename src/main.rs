@@ -1,7 +1,8 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+#![forbid(unsafe_code)]
 #![allow(clippy::too_many_lines)]
 #![doc = include_str!("../README.md")]
-#![windows_subsystem = "windows"]
+#![windows_subsystem = "console"]
 
 mod config;
 mod db;
@@ -29,6 +30,7 @@ async fn main() {
     if env::args().any(|a| a == "--trace") {
         env::set_var("TDB_LOG", "TRACE");
     }
+
     // Tracing subscriber only for the initial config load.
     tracing_subscriber::fmt()
         .with_target(false)
@@ -79,14 +81,17 @@ async fn main() {
                 .args(&[
                     // Hidden output level args.
                     Arg::new("debug")
+                        .about("Use debug level output")
                         .long("debug")
                         .conflicts_with_all(&["info", "trace"])
                         .hidden(true),
                     Arg::new("info")
+                        .about("Use info level output")
                         .long("info")
                         .conflicts_with_all(&["debug", "trace"])
                         .hidden(true),
                     Arg::new("trace")
+                        .about("Use trace level output")
                         .long("trace")
                         .conflicts_with_all(&["debug", "info"])
                         .hidden(true),
