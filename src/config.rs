@@ -12,41 +12,59 @@ use crate::util::OkOrExit;
 #[derive(Debug, Deserialize)]
 pub struct Config<'cfg> {
     #[serde(borrow, rename = "Servers")]
-    pub servers: HashMap<&'cfg str, &'cfg str>,
+    pub servers: Servers<'cfg>,
     #[serde(borrow, rename = "Staff")]
     pub staff: Staff<'cfg>,
     #[serde(borrow, rename = "StaffBadges")]
     pub staff_badges: StaffBadges<'cfg>,
 }
 
+pub type Servers<'a> = HashMap<&'a str, ServerInfo<'a>>;
+
+#[derive(Copy, Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, untagged)]
+pub enum ServerInfo<'a> {
+    Tuple(&'a str),
+    Struct {
+        url: &'a str,
+        #[serde(default = "default_port")]
+        port: u16,
+    },
+}
+
+/// The default port for SQL Server.
+const fn default_port() -> u16 {
+    1433
+}
+
 /// Representation of a `tdb` config file `Staff` object.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Staff<'cfg> {
+pub struct Staff<'a> {
     #[serde(rename = "LoginUserId")]
-    pub login_user_id: &'cfg str,
+    pub login_user_id: &'a str,
     #[serde(rename = "PIN")]
-    pub pin: &'cfg str,
+    pub pin: &'a str,
     #[serde(rename = "FirstName")]
-    pub first_name: &'cfg str,
+    pub first_name: &'a str,
     #[serde(rename = "LastName")]
-    pub last_name: &'cfg str,
+    pub last_name: &'a str,
     #[serde(rename = "NTUserName")]
-    pub nt_username: &'cfg str,
+    pub nt_username: &'a str,
     #[serde(rename = "EmailAddress")]
-    pub email_address: &'cfg str,
+    pub email_address: &'a str,
     #[serde(rename = "SSOUserId")]
-    pub sso_user_id: &'cfg str,
+    pub sso_user_id: &'a str,
 }
 
 /// Representation of a `tdb` config file `StaffBadges` object.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct StaffBadges<'cfg> {
+pub struct StaffBadges<'a> {
     #[serde(rename = "LoginUserId")]
-    pub login_user_id: &'cfg str,
+    pub login_user_id: Option<&'a str>,
     #[serde(rename = "BadgeData")]
-    pub badge_data: &'cfg str,
+    pub badge_data: &'a str,
 }
 
 /// Load a config file from the current directory into a buffer and return the deserialized

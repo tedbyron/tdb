@@ -2,8 +2,10 @@
 
 # Items listed under the [servers] key can be aliased to whatever you like
 [Servers]
+# Uses default port 1433
 dev-east = 'https://example.com'
-prod-east = 'https://example.com'
+# Manually specify port number
+prod-east = { url = 'https://example.com', port = 1434 }
 
 [Staff]
 LoginUserId = 'jdoe'
@@ -15,6 +17,6 @@ EmailAddress = 'jdoe@talisclinical.com'
 SSOUserId = 'aaaaaaaa-1111-bbbb-2222-cccccccccccc'
 
 [StaffBadges]
-# defaults to Staff.LoginUserId if empty, use the '-u --user' flag to specify from CLI
-LoginUserId = ''
+# LoginUserId below defaults to Staff.LoginUserId if not specified, use the '-u --user' flag to specify from CLI
+# LoginUserId = 'jsmith'
 BadgeData = '022BEEEF'

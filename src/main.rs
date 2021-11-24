@@ -1,7 +1,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
-#![forbid(unsafe_code)]
 #![allow(clippy::too_many_lines)]
 #![doc = include_str!("../README.md")]
+#![windows_subsystem = "windows"]
 
 mod config;
 mod db;
@@ -40,7 +40,7 @@ async fn main() {
     tracing::debug!(command = command.trim_end());
 
     // Load the config file into a buffer and deserialize it.
-    let mut buf = String::with_capacity(2_000);
+    let mut buf = String::with_capacity(2_048);
     let cfg = config::load("tdb.toml", &mut buf);
 
     // Create the CLI app.
@@ -70,51 +70,55 @@ async fn main() {
 
     // Add servers and arguments to the CLI app.
     tracing::debug!("adding subcommands");
-    for (&server, &addr) in &cfg.servers {
+    for (&server, &info) in &cfg.servers {
         app = app.subcommand(
-            App::new(server).about(addr).args(&[
-                // Hidden output level args.
-                Arg::new("debug")
-                    .long("debug")
-                    .conflicts_with_all(&["info", "trace"])
-                    .hidden(true),
-                Arg::new("info")
-                    .long("info")
-                    .conflicts_with_all(&["debug", "trace"])
-                    .hidden(true),
-                Arg::new("trace")
-                    .long("trace")
-                    .conflicts_with_all(&["debug", "info"])
-                    .hidden(true),
-                // Actual args.
-                Arg::new(db::Args::DATABASE.as_ref())
-                    .about("The database to use")
-                    .takes_value(true)
-                    .required(true)
-                    .index(1),
-                Arg::new(db::Args::OP.as_ref())
-                    .about("The operation to perform")
-                    .required(true)
-                    .takes_value(true)
-                    .case_insensitive(true)
-                    .possible_values(db::OPS)
-                    .index(2),
-                Arg::new(db::Args::TABLE.as_ref())
-                    .about("The table to operate on")
-                    .required(true)
-                    .takes_value(true)
-                    .index(3),
-                Arg::new("where")
-                    .about("A WHERE clause")
-                    .short('w')
-                    .long("where")
-                    .takes_value(true),
-                Arg::new("set")
-                    .about("A SET clause")
-                    .short('s')
-                    .long("set")
-                    .takes_value(true),
-            ]),
+            App::new(server)
+                .about(match info {
+                    config::ServerInfo::Tuple(url) | config::ServerInfo::Struct { url, .. } => url,
+                })
+                .args(&[
+                    // Hidden output level args.
+                    Arg::new("debug")
+                        .long("debug")
+                        .conflicts_with_all(&["info", "trace"])
+                        .hidden(true),
+                    Arg::new("info")
+                        .long("info")
+                        .conflicts_with_all(&["debug", "trace"])
+                        .hidden(true),
+                    Arg::new("trace")
+                        .long("trace")
+                        .conflicts_with_all(&["debug", "info"])
+                        .hidden(true),
+                    // Actual args.
+                    Arg::new(db::ARG_NAMES[0])
+                        .about("The database to use")
+                        .takes_value(true)
+                        .required(true)
+                        .index(1),
+                    Arg::new(db::ARG_NAMES[1])
+                        .about("The operation to perform")
+                        .required(true)
+                        .takes_value(true)
+                        .case_insensitive(true)
+                        .possible_values(db::OPS)
+                        .index(2),
+                    Arg::new(db::ARG_NAMES[2])
+                        .about("The table to operate on")
+                        .required(true)
+                        .takes_value(true)
+                        .index(3),
+                    Arg::new("where")
+                        .about("A WHERE clause")
+                        .short('w')
+                        .long("where")
+                        .takes_value(true),
+                    Arg::new("set")
+                        .about("A SET clause")
+                        .short('s')
+                        .long("set")
+                        .takes_value(true),
+                ]),
         );
     }
     drop(span);
@@ -126,9 +130,15 @@ async fn main() {
     drop(span);
 
     // Get subcommand matches and perform a database query.
-    for (server, address) in cfg.servers {
+    for (server, info) in cfg.servers {
         if let Some(matches) = matches.subcommand_matches(server) {
-            db::dispatch(address, matches);
+            db::dispatch(
+                match info {
+                    config::ServerInfo::Tuple(url) | config::ServerInfo::Struct { url, .. } => url,
+                },
+                matches,
+            )
+            .await;
         }
     }
 }

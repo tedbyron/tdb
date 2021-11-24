@@ -1,46 +1,34 @@
 use clap::ArgMatches;
 
-use crate::util::SomeOrExit;
-
+pub const ARG_NAMES: [&str; 3] = ["DATABASE", "OP", "TABLE"];
 pub const OPS: [&str; 6] = ["s", "select", "i", "insert", "u", "update"];
 
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug)]
-pub enum Args {
-    DATABASE,
-    OP,
-    TABLE,
-}
+/// Dispatch a database query to an address.
+#[tracing::instrument(level = "debug", skip_all)]
+pub async fn dispatch(address: &str, matches: &ArgMatches) {
+    // Parse the database name. Unwrap is safe because the arg is required.
+    let db_arg = matches.value_of(ARG_NAMES[0]).unwrap();
+    tracing::debug!(db_arg);
+    let db = parse_db_name(db_arg);
+    tracing::info!(%db);
 
-impl AsRef<str> for Args {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::DATABASE => "DATABASE",
-            Self::OP => "OP",
-            Self::TABLE => "TABLE",
-        }
+    // Get the operation name. Unwrap is safe because the arg is required.
+    let op = matches.value_of(ARG_NAMES[1]).unwrap();
+    tracing::info!(op);
+
+    // Get the table name. Unwrap is safe because the arg is required.
+    let table = matches.value_of(ARG_NAMES[2]).unwrap();
+    tracing::info!(table);
+
+    match op {
+        "s" | "select" => select(address, &db, table, matches).await,
+        "i" | "insert" => insert(address, &db, table, matches).await,
+        "u" | "update" => update(address, &db, table, matches).await,
+        _ => unreachable!(), // CLI already checked the value.
     }
 }
 
-/// Dispatch a database query to an address.
-#[tracing::instrument(level = "debug", skip(matches))]
-pub fn dispatch(address: &str, matches: &ArgMatches) {
-    // Parse the database name.
-    let db_name = matches
-        .value_of(Args::DATABASE.as_ref())
-        .or_exit(2, Args::DATABASE.as_ref());
-    tracing::debug!(db_name);
-    let db_parsed = parse_db_name(db_name);
-    tracing::info!(%db_parsed);
-
-    let table_name = matches
-        .value_of(Args::TABLE.as_ref())
-        .or_exit(2, Args::TABLE.as_ref());
-    tracing::info!(table_name);
-}
-
 /// Check if a database name is a database code (3 ASCII characters and 2 ASCII digits).
-#[inline]
 fn is_db_code(db_name: &str) -> bool {
     if db_name.len() != 5 {
         return false;
@@ -58,3 +46,15 @@ fn parse_db_name(db_name: &str) -> String {
 
     db_name.to_owned()
 }
+
+/// Execute a SELECT statement.
+#[tracing::instrument(level = "debug", skip_all)]
+async fn select(address: &str, db: &str, table: &str, matches: &ArgMatches) {}
+
+/// Execute an INSERT statement.
+#[tracing::instrument(level = "debug", skip_all)]
+async fn insert(address: &str, db: &str, table: &str, matches: &ArgMatches) {}
+
+/// Execute an UPDATE statement.
+#[tracing::instrument(level = "debug", skip_all)]
+async fn update(address: &str, db: &str, table: &str, matches: &ArgMatches) {}
