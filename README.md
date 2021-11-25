@@ -1,19 +1,17 @@
 <div align="center">
   <h1><code>tdb</code></h1>
-  <p><strong>Simple Talis database commands.</strong></p>
+  <p><strong>Simple Talis MSSQL CLI.</strong></p>
 </div>
 
 ## About
 
-1. **All traffic to and from servers is encrypted** with native TLS implemented by:
+1. **All traffic to and from servers is encrypted** using the native Windows TLS implementation (Schannel).
 
-   - Schannel on Windows
-   - Secure Transport on macOS
-   - OpenSSL on other platforms
+2. Database authentication is done using integrated authentication (Active Directory).
 
-2. No network connections are made until after queries are checked at runtime.
+3. Queries are only checked by the database.
 
-3. No database connections are pooled because the lifetime of this application begins and ends on the command line.
+4. No database connections are pooled because the lifetime of this application begins and ends on the command line.
 
 ## Help
 
@@ -26,8 +24,18 @@ tdb help <SERVER>
 
 ```sh
 tdb <SERVER> <DATABASE> <OP> <TABLE> [args]
-# e.g.
+```
+
+For example:
+
+```sh
+# quotes are required, or the command line will split your arguments
 tdb dev-east bid01 select staff --where "loginuserid = 'tbyron'"
+tdb dev-east bid01 s staff -w "loginuserid = 'tbyron'"
+```
+
+```sh
+tdb dev-east bid01 update staff --where "loginuserid='tbyron'" --set "pin='1212'"
 tdb dev-east bid01 u staff -w "loginuserid='tbyron'" -s "pin='1212'"
 ```
 
@@ -37,9 +45,9 @@ The main config `tdb.toml` should be located in the same directory as the execut
 
 ### Custom config file
 
-You may create custom config files in any directory. The command line argument `-c` or `--config` must be passed to the CLI to load a custom config file.
+You may create custom config files in any directory. This can be useful for creating identical test accounts across multiple databases. The command line argument `-c` or `--config` must be passed to the CLI to load a custom config file.
 
-> **Note**: `Server` connection URLs will only be read from the main config file `tdb.toml`
+> **Note**: `Server` connection URLs will only be read from the main config file `tdb.toml`.
 
 ```toml
 # File name: my-staff.toml
@@ -59,7 +67,7 @@ SSOUserId = 'aaaaaaaa-1111-bbbb-2222-cccccccccccc'
 The custom config file may then be passed to the CLI like so:
 
 ```sh
-tdb --config 'my-staff.toml' dev-east bid01 insert staff
-# equivalent to
-tdb -c 'my-staff.toml' dev-east bid01 insert staff
+tdb --config '.\my-staff.toml' dev-east bid01 insert staff
+# or
+tdb -c '.\my-staff.toml' dev-east bid01 insert staff
 ```

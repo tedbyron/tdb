@@ -1,6 +1,8 @@
-# All items are required for the program to be able to read the config
+# All items listed below are required for the program to be able to read the
+# config.
 
-# Items listed under the [servers] key can be aliased to whatever you like
+# Items listed under the [servers] key can be aliased to whatever you like. The
+# server names will be used as subcommands for the CLI.
 [Servers]
 # Uses default port 1433
 dev-east = 'https://example.com'
@@ -13,10 +15,11 @@ PIN = '1111'
 FirstName = 'John'
 LastName = 'Doe'
 NTUserName = 'john.doe'
-EmailAddress = 'jdoe@talisclinical.com'
+EmailAddress = 'jdoe@example.com'
 SSOUserId = 'aaaaaaaa-1111-bbbb-2222-cccccccccccc'
 
 [StaffBadges]
-# LoginUserId below defaults to Staff.LoginUserId if not specified, use the '-u --user' flag to specify from CLI
-# LoginUserId = 'jsmith'
+# LoginUserId below defaults to Staff.LoginUserId if not specified, use the
+# '-w --where' flag to specify from the CLI.
+LoginUserId = 'jdoe'
 BadgeData = '022BEEEF'

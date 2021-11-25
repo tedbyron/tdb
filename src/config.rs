@@ -10,17 +10,19 @@ use crate::util;
 
 /// Representation of a `tdb` config file.
 #[derive(Debug, Deserialize)]
-pub struct Config<'cfg> {
+pub struct Config<'a> {
     #[serde(borrow, rename = "Servers")]
-    pub servers: Servers<'cfg>,
+    pub servers: Servers<'a>,
     #[serde(borrow, rename = "Staff")]
-    pub staff: Staff<'cfg>,
+    pub staff: Staff<'a>,
     #[serde(borrow, rename = "StaffBadges")]
-    pub staff_badges: StaffBadges<'cfg>,
+    pub staff_badges: StaffBadges<'a>,
 }
 
+/// Representation of a `tdb` config file `Servers` object.
 pub type Servers<'a> = HashMap<&'a str, ServerInfo<'a>>;
 
+/// Representation of a `tdb` config file `ServerInfo` object.
 #[derive(Copy, Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, untagged)]
 pub enum ServerInfo<'a> {

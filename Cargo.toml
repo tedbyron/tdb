@@ -3,8 +3,8 @@ name = "tdb"
 version = "1.0.0"
 edition = "2021"
 publish = false
-description = "Simple Talis database commands."
-authors = ["Teddy Byron <ted@talisclinical.com>"]
+description = "Simple Talis MSSQL CLI."
+authors = ["Teddy Byron <tbyron@talisclinical.com>"]
 readme = "README.md"
 
 [dependencies]
@@ -14,7 +14,7 @@ tracing = "0.1.29"
 [dependencies.clap]
 version = "3.0.0-beta.5"
 default-features = false
-features = ["std", "cargo", "env", "suggestions", "color", "wrap_help", "unicode"]
+features = ["std", "cargo", "color", "env", "suggestions", "unicode", "wrap_help"]
 
 [dependencies.serde]
 version = "1.0.130"
@@ -26,7 +26,7 @@ features = ["sql-browser-tokio"]
 
 [dependencies.tokio]
 version = "1.14.0"
-features = ["rt", "macros", "parking_lot"]
+features = ["rt", "macros", "net", "parking_lot"]
 
 [dependencies.tracing-subscriber]
 version = "0.3.2"

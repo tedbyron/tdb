@@ -15,10 +15,13 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::time;
 use tracing_subscriber::EnvFilter;
 
+use config::ServerInfo;
 use util::{OkOrExit, Result};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    // All errors are propagated here so that destructors are called before the process exits with
+    // an error code.
     run().await.or_exit(1);
 }
 
@@ -44,7 +47,7 @@ async fn run() -> Result<()> {
         .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE)
         .with_env_filter(EnvFilter::from_env("TDB_LOG"))
         .init();
-    let command = env::args().fold(String::with_capacity(50), |s, a| s + &a + " ");
+    let command = env::args().fold(String::with_capacity(128), |acc, arg| acc + &arg + " ");
     tracing::debug!(command = command.trim_end());
 
     // Load the config file into a buffer and deserialize it.
@@ -59,15 +62,15 @@ async fn run() -> Result<()> {
         .version(clap::crate_version!())
         .args(&[
             Arg::new("debug")
-                .about("Use debug level output")
+                .about("Use debug output")
                 .long("debug")
                 .conflicts_with_all(&["info", "trace"]),
             Arg::new("info")
-                .about("Use info level output")
+                .about("Use info output")
                 .long("info")
                 .conflicts_with_all(&["debug", "trace"]),
             Arg::new("trace")
-                .about("Use trace level output")
+                .about("Use trace output")
                 .long("trace")
                 .conflicts_with_all(&["debug", "info"]),
             Arg::new("config")
@@ -82,22 +85,22 @@ async fn run() -> Result<()> {
         app = app.subcommand(
             App::new(server)
                 .about(match info {
-                    config::ServerInfo::Tuple(url) | config::ServerInfo::Struct { url, .. } => url,
+                    ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => url,
                 })
                 .args(&[
                     // Hidden output level args.
                     Arg::new("debug")
-                        .about("Use debug level output")
+                        .about("Use debug output")
                         .long("debug")
                         .conflicts_with_all(&["info", "trace"])
                         .hidden(true),
                     Arg::new("info")
-                        .about("Use info level output")
+                        .about("Use info output")
                         .long("info")
                         .conflicts_with_all(&["debug", "trace"])
                         .hidden(true),
                     Arg::new("trace")
-                        .about("Use trace level output")
+                        .about("Use trace output")
                         .long("trace")
                         .conflicts_with_all(&["debug", "info"])
                         .hidden(true),
@@ -126,6 +129,11 @@ async fn run() -> Result<()> {
                         .short('s')
                         .long("set")
                         .takes_value(true),
+                    Arg::new("VALUES")
+                        .about("A VALUES clause")
+                        .short('v')
+                        .long("values")
+                        .takes_value(true),
                 ]),
         );
     }
@@ -140,13 +148,11 @@ async fn run() -> Result<()> {
     // Get subcommand matches and perform a database query.
     for (server, info) in cfg.servers {
         if let Some(matches) = matches.subcommand_matches(server) {
-            db::dispatch(
-                match info {
-                    config::ServerInfo::Tuple(url) | config::ServerInfo::Struct { url, .. } => url,
-                },
-                matches,
-            )
-            .await;
+            let url = match info {
+                ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => url,
+            };
+            db::dispatch(url, matches).await?;
+            break;
         }
     }
 
