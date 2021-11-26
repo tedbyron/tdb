@@ -1,25 +1,42 @@
+//! Database operations.
+
 use clap::ArgMatches;
 
 use crate::util;
 
-pub const ARG_NAMES: [&str; 3] = ["DATABASE", "OP", "TABLE"];
 pub const OPS: [&str; 6] = ["s", "select", "i", "insert", "u", "update"];
+
+#[derive(Debug, Hash, strum::Display, strum::IntoStaticStr)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum RequiredArg {
+    Database,
+    Op,
+    Table,
+}
+
+#[derive(Debug, Hash, strum::Display, strum::IntoStaticStr)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum OptionalArg {
+    Where,
+    Set,
+    Values,
+}
 
 /// Dispatch a database query to an address.
 #[tracing::instrument(level = "debug", skip_all)]
 pub async fn dispatch(address: &str, matches: &ArgMatches) -> util::Result<()> {
     // Parse the database name. Unwrap is safe because the arg is required.
-    let db_arg = matches.value_of(ARG_NAMES[0]).unwrap();
+    let db_arg = matches.value_of(RequiredArg::Database).unwrap();
     tracing::debug!(db_arg);
     let db = parse_db_name(db_arg);
     tracing::info!(%db);
 
     // Get the operation name. Unwrap is safe because the arg is required.
-    let op = matches.value_of(ARG_NAMES[1]).unwrap();
+    let op = matches.value_of(RequiredArg::Op).unwrap();
     tracing::info!(op);
 
     // Get the table name. Unwrap is safe because the arg is required.
-    let table = matches.value_of(ARG_NAMES[2]).unwrap();
+    let table = matches.value_of(RequiredArg::Table).unwrap();
     tracing::info!(table);
 
     match op {

@@ -15,8 +15,9 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::time;
 use tracing_subscriber::EnvFilter;
 
-use config::ServerInfo;
-use util::{OkOrExit, Result};
+use crate::config::ServerInfo;
+use crate::db::{OptionalArg, RequiredArg};
+use crate::util::OkOrExit;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -25,7 +26,7 @@ async fn main() {
     run().await.or_exit(1);
 }
 
-async fn run() -> Result<()> {
+async fn run() -> util::Result<()> {
     // Default to tracing `LEVEL::WARN`.
     if env::var("TDB_LOG").is_err() {
         env::set_var("TDB_LOG", "WARN");
@@ -40,15 +41,15 @@ async fn run() -> Result<()> {
         env::set_var("TDB_LOG", "TRACE");
     }
 
-    // Tracing subscriber only for the initial config load.
+    // Global tracing subscriber.
     tracing_subscriber::fmt()
         .with_target(false)
         .with_timer(time::uptime())
         .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE)
         .with_env_filter(EnvFilter::from_env("TDB_LOG"))
         .init();
-    let command = env::args().fold(String::with_capacity(128), |acc, arg| acc + &arg + " ");
-    tracing::debug!(command = command.trim_end());
+    // https://github.com/rust-lang/rust/issues/79524
+    tracing::debug!(command = %env::args().collect::<Vec<_>>().join(" "));
 
     // Load the config file into a buffer and deserialize it.
     let mut buf = String::with_capacity(2_048);
@@ -60,7 +61,7 @@ async fn run() -> Result<()> {
         .about(clap::crate_description!())
         .author(clap::crate_authors!())
         .version(clap::crate_version!())
-        .args(&[
+        .args([
             Arg::new("debug")
                 .about("Use debug output")
                 .long("debug")
@@ -87,7 +88,7 @@ async fn run() -> Result<()> {
                 .about(match info {
                     ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => url,
                 })
-                .args(&[
+                .args([
                     // Hidden output level args.
                     Arg::new("debug")
                         .about("Use debug output")
@@ -105,31 +106,31 @@ async fn run() -> Result<()> {
                         .conflicts_with_all(&["debug", "info"])
                         .hidden(true),
                     // Actual args.
-                    Arg::new(db::ARG_NAMES[0])
+                    Arg::new(RequiredArg::Database)
                         .about("The database to use")
                         .takes_value(true)
                         .required(true),
-                    Arg::new(db::ARG_NAMES[1])
+                    Arg::new(RequiredArg::Op)
                         .about("The operation to perform")
                         .required(true)
                         .takes_value(true)
                         .case_insensitive(true)
-                        .possible_values(db::OPS),
-                    Arg::new(db::ARG_NAMES[2])
+                        .possible_values(["s", "select", "i", "insert", "u", "update"]),
+                    Arg::new(RequiredArg::Table)
                         .about("The table to operate on")
                         .required(true)
                         .takes_value(true),
-                    Arg::new("WHERE")
+                    Arg::new(OptionalArg::Where)
                         .about("A WHERE clause")
                         .short('w')
                         .long("where")
                         .takes_value(true),
-                    Arg::new("SET")
+                    Arg::new(OptionalArg::Set)
                         .about("A SET clause")
                         .short('s')
                         .long("set")
                         .takes_value(true),
-                    Arg::new("VALUES")
+                    Arg::new(OptionalArg::Values)
                         .about("A VALUES clause")
                         .short('v')
                         .long("values")

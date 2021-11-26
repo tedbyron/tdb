@@ -20,6 +20,10 @@ features = ["std", "cargo", "color", "env", "suggestions", "unicode", "wrap_help
 version = "1.0.130"
 features = ["derive"]
 
+[dependencies.strum]
+version = "0.23.0"
+features = ["derive"]
+
 [dependencies.tiberius]
 version = "0.6.5"
 features = ["sql-browser-tokio"]
@@ -34,3 +38,8 @@ default-features = false
 features = ["std", "env-filter", "fmt", "ansi", "parking_lot"]
 
 [features]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"

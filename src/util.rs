@@ -2,6 +2,7 @@
 
 use std::process;
 
+/// A `Result` type that may contain a thread-safe `Error`.
 pub type Result<T> = std::result::Result<T, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
 /// Exit the running process if a `Result` contains an `Err`.

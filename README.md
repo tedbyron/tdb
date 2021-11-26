@@ -5,13 +5,15 @@
 
 ## About
 
-1. **All traffic to and from servers is encrypted** using the native Windows TLS implementation (Schannel).
+1. **All network traffic is encrypted** using the native Windows TLS implementation ([Schannel](https://docs.microsoft.com/en-us/windows/win32/com/schannel)).
 
-2. Database authentication is done using integrated authentication (Active Directory).
+2. All database connections currently use TCP/IP. Support for [named pipes](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) instead of TCP/IP may be implemented in the future.
 
-3. Queries are only checked by the database.
+3. Database authentication uses [Windows authentication](https://docs.microsoft.com/en-us/sql/relational-databases/security/choose-an-authentication-mode?view=sql-server-ver15#connecting-through-windows-authentication) (Kerberos). Support for SQL Server authentication may be implemented in the future.
 
-4. No database connections are pooled because the lifetime of this application begins and ends on the command line.
+4. Queries are only checked by the database.
+
+5. No database connections are pooled because the lifetime of this application begins and ends on the command line.
 
 ## Help
 
@@ -45,13 +47,12 @@ The main config `tdb.toml` should be located in the same directory as the execut
 
 ### Custom config file
 
-You may create custom config files in any directory. This can be useful for creating identical test accounts across multiple databases. The command line argument `-c` or `--config` must be passed to the CLI to load a custom config file.
+You may create custom config files in any directory. This can be useful for creating identical test accounts across multiple databases. The command line argument `-c, --config` must be passed to the CLI to load a custom config file.
 
 > **Note**: `Server` connection URLs will only be read from the main config file `tdb.toml`.
 
 ```toml
-# File name: my-staff.toml
-
+# File path: ./my-staff.toml
 [Staff]
 LoginUserId = 'jdoe'
 PIN = '1111'
@@ -60,14 +61,13 @@ LastName = 'Doe'
 NTUserName = 'john.doe'
 EmailAddress = 'jdoe@talisclinical.com'
 SSOUserId = 'aaaaaaaa-1111-bbbb-2222-cccccccccccc'
-
 # …
 ```
 
 The custom config file may then be passed to the CLI like so:
 
 ```sh
-tdb --config '.\my-staff.toml' dev-east bid01 insert staff
+tdb --config './my-staff.toml' dev-east bid01 insert staff
 # or
-tdb -c '.\my-staff.toml' dev-east bid01 insert staff
+tdb -c './my-staff.toml' dev-east bid01 insert staff
 ```
