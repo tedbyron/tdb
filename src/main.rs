@@ -1,5 +1,5 @@
-#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![forbid(unsafe_code)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, rust_2018_idioms)]
 #![allow(clippy::too_many_lines)]
 #![doc = include_str!("../README.md")]
 #![windows_subsystem = "console"]
@@ -15,8 +15,6 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::time;
 use tracing_subscriber::EnvFilter;
 
-use crate::config::ServerInfo;
-use crate::db::{OptionalArg, RequiredArg};
 use crate::util::OkOrExit;
 
 #[tokio::main(flavor = "current_thread")]
@@ -43,10 +41,11 @@ async fn run() -> util::Result<()> {
 
     // Global tracing subscriber.
     tracing_subscriber::fmt()
-        .with_target(false)
-        .with_timer(time::uptime())
-        .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE)
-        .with_env_filter(EnvFilter::from_env("TDB_LOG"))
+        .with_target(false) // Don't show source file names.
+        .with_ansi(true) // Support color for older Windows terminals.
+        .with_timer(time::uptime()) // Use program uptime instead of system time.
+        .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE) // Show elapsed time on span exit.
+        .with_env_filter(EnvFilter::from_env("TDB_LOG")) // Filter using $TDB_LOG.
         .init();
     // https://github.com/rust-lang/rust/issues/79524
     tracing::debug!(command = %env::args().collect::<Vec<_>>().join(" "));
@@ -82,60 +81,67 @@ async fn run() -> util::Result<()> {
 
     // Add servers and arguments to the CLI app.
     tracing::debug!("adding subcommands");
-    for (&server, &info) in &cfg.servers {
+    for (server, info) in &cfg.servers {
         app = app.subcommand(
-            App::new(server)
-                .about(match info {
-                    ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => url,
-                })
-                .args([
-                    // Hidden output level args.
-                    Arg::new("debug")
-                        .about("Use debug output")
-                        .long("debug")
-                        .conflicts_with_all(&["info", "trace"])
-                        .hidden(true),
-                    Arg::new("info")
-                        .about("Use info output")
-                        .long("info")
-                        .conflicts_with_all(&["debug", "trace"])
-                        .hidden(true),
-                    Arg::new("trace")
-                        .about("Use trace output")
-                        .long("trace")
-                        .conflicts_with_all(&["debug", "info"])
-                        .hidden(true),
-                    // Actual args.
-                    Arg::new(RequiredArg::Database)
-                        .about("The database to use")
-                        .takes_value(true)
-                        .required(true),
-                    Arg::new(RequiredArg::Op)
-                        .about("The operation to perform")
-                        .required(true)
-                        .takes_value(true)
-                        .case_insensitive(true)
-                        .possible_values(["s", "select", "i", "insert", "u", "update"]),
-                    Arg::new(RequiredArg::Table)
-                        .about("The table to operate on")
-                        .required(true)
-                        .takes_value(true),
-                    Arg::new(OptionalArg::Where)
-                        .about("A WHERE clause")
-                        .short('w')
-                        .long("where")
-                        .takes_value(true),
-                    Arg::new(OptionalArg::Set)
-                        .about("A SET clause")
-                        .short('s')
-                        .long("set")
-                        .takes_value(true),
-                    Arg::new(OptionalArg::Values)
-                        .about("A VALUES clause")
-                        .short('v')
-                        .long("values")
-                        .takes_value(true),
-                ]),
+            App::new(*server).about(info.url()).args([
+                // Hidden output level args.
+                Arg::new("debug")
+                    .about("Use debug output")
+                    .long("debug")
+                    .conflicts_with_all(&["info", "trace"])
+                    .hidden(true),
+                Arg::new("info")
+                    .about("Use info output")
+                    .long("info")
+                    .conflicts_with_all(&["debug", "trace"])
+                    .hidden(true),
+                Arg::new("trace")
+                    .about("Use trace output")
+                    .long("trace")
+                    .conflicts_with_all(&["debug", "info"])
+                    .hidden(true),
+                // Required args.
+                Arg::new("DATABASE")
+                    .about("The database to use")
+                    .takes_value(true)
+                    .required(true),
+                Arg::new("OPERATION")
+                    .about("The operation to perform")
+                    .required(true)
+                    .takes_value(true)
+                    .case_insensitive(true)
+                    .possible_values(["s", "select", "i", "insert", "u", "update"]),
+                Arg::new("TABLE")
+                    .about("The table to operate on")
+                    .required(true)
+                    .takes_value(true),
+                // Optional args.
+                Arg::new("WHERE")
+                    .about("A WHERE clause")
+                    .short('w')
+                    .long("where")
+                    .takes_value(true),
+                Arg::new("SET")
+                    .about("A SET clause")
+                    .short('s')
+                    .long("set")
+                    .takes_value(true),
+                Arg::new("VALUES")
+                    .about("A VALUES clause")
+                    .short('v')
+                    .long("values")
+                    .takes_value(true),
+                Arg::new("ORDER_BY")
+                    .about("An ORDER BY clause")
+                    .short('o')
+                    .long("order-by")
+                    .takes_value(true),
+                Arg::new("GROUP_BY")
+                    .about("A GROUP BY clause")
+                    .short('g')
+                    .long("group-by")
+                    .takes_value(true),
+            ]),
         );
     }
     drop(span);
@@ -149,10 +155,7 @@ async fn run() -> util::Result<()> {
     // Get subcommand matches and perform a database query.
     for (server, info) in cfg.servers {
         if let Some(matches) = matches.subcommand_matches(server) {
-            let url = match info {
-                ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => url,
-            };
-            db::dispatch(url, matches).await?;
+            db::dispatch(info, matches).await?;
             break;
         }
     }

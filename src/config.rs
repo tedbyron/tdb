@@ -33,6 +33,23 @@ pub enum ServerInfo<'cfg> {
     },
 }
 
+impl ServerInfo<'_> {
+    /// Get the server URL.
+    pub const fn url(&self) -> &str {
+        match self {
+            ServerInfo::Tuple(url) | ServerInfo::Struct { url, .. } => *url,
+        }
+    }
+
+    /// Get the server port.
+    pub const fn port(&self) -> u16 {
+        match self {
+            ServerInfo::Tuple(_) => default_port(),
+            ServerInfo::Struct { port, .. } => *port,
+        }
+    }
+}
+
 /// The default port for SQL Server (1433).
 const fn default_port() -> u16 {
     1433
@@ -65,11 +82,11 @@ pub struct StaffBadges<'cfg> {
 /// Load a config file from the current directory into a buffer and return the deserialized
 /// [`Config`]. The buffer's capacity should be greater than or equal to the file's contents to
 /// avoid reallocations.
-#[tracing::instrument(name = "config", level = "debug", skip_all, fields(file = file_name))]
+#[tracing::instrument(level = "debug", skip_all, fields(file = file_name))]
 pub fn load<'a>(file_name: &str, buf: &'a mut String) -> util::Result<Config<'a>> {
     let mut file = File::open(file_name)?;
     let len = file.read_to_string(buf)?;
-    let cfg: Config = toml::from_str(buf)?;
+    let cfg: Config<'a> = toml::from_str(buf)?;
 
     tracing::debug!("buf.capacity()={}", buf.capacity());
     tracing::debug!("file.len()={}", len);

@@ -9,28 +9,16 @@ readme = "README.md"
 
 [dependencies]
 toml = "0.5.8"
+tiberius = { version = "0.6.5", features = ["sql-browser-tokio"] }
 tracing = "0.1.29"
+tokio = { version = "1.14.0", features = ["rt", "macros", "net", "time", "parking_lot"] }
+tokio-util = { version = "0.6.9", features = ["compat"] }
+serde = { version = "1.0.130", features = ["derive"] }
 
 [dependencies.clap]
 version = "3.0.0-beta.5"
 default-features = false
 features = ["std", "cargo", "color", "env", "suggestions", "unicode", "wrap_help"]
-
-[dependencies.serde]
-version = "1.0.130"
-features = ["derive"]
-
-[dependencies.strum]
-version = "0.23.0"
-features = ["derive"]
-
-[dependencies.tiberius]
-version = "0.6.5"
-features = ["sql-browser-tokio"]
-
-[dependencies.tokio]
-version = "1.14.0"
-features = ["rt", "macros", "net", "parking_lot"]
 
 [dependencies.tracing-subscriber]
 version = "0.3.2"
@@ -43,3 +31,4 @@ features = ["std", "env-filter", "fmt", "ansi", "parking_lot"]
 lto = "fat"
 codegen-units = 1
 panic = "abort"
+# strip = "symbols"

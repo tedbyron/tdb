@@ -5,9 +5,9 @@
 # server names will be used as subcommands for the CLI.
 [Servers]
 # Uses default port 1433
-dev-east = 'https://example.com'
+example = 'example.com'
 # Manually specify port number
-prod-east = { url = 'https://example.com', port = 1434 }
+example-port = { url = 'example.com', port = 1434 }
 
 [Staff]
 LoginUserId = 'jdoe'
