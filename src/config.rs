@@ -82,14 +82,14 @@ pub struct StaffBadges<'cfg> {
 /// Load a config file from the current directory into a buffer and return the deserialized
 /// [`Config`]. The buffer's capacity should be greater than or equal to the file's contents to
 /// avoid reallocations.
-#[tracing::instrument(level = "debug", skip_all, fields(file = file_name))]
+#[tracing::instrument(level = "trace", skip_all, fields(file = file_name))]
 pub fn load<'a>(file_name: &str, buf: &'a mut String) -> util::Result<Config<'a>> {
     let mut file = File::open(file_name)?;
     let len = file.read_to_string(buf)?;
     let cfg: Config<'a> = toml::from_str(buf)?;
 
-    tracing::debug!("buf.capacity()={}", buf.capacity());
-    tracing::debug!("file.len()={}", len);
+    tracing::trace!("buf.capacity()={}", buf.capacity());
+    tracing::trace!("file.len()={}", len);
     tracing::trace!(?cfg);
     tracing::info!("{} loaded", file_name);
 

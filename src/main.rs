@@ -28,6 +28,7 @@ async fn main() {
     // All errors are propagated here so that destructors are called before the process exits with
     // an error code.
     run().await.or_exit(1);
+    tracing::info!("Done");
 }
 
 async fn run() -> util::Result<()> {
@@ -37,9 +38,6 @@ async fn run() -> util::Result<()> {
     }
     if env::args().any(|a| a == "--info") {
         env::set_var("TDB_LOG", "INFO");
-    }
-    if env::args().any(|a| a == "--debug") {
-        env::set_var("TDB_LOG", "DEBUG");
     }
     if env::args().any(|a| a == "--trace") {
         env::set_var("TDB_LOG", "TRACE");
@@ -56,7 +54,7 @@ async fn run() -> util::Result<()> {
     sub.init();
 
     // https://github.com/rust-lang/rust/issues/79524
-    tracing::debug!(command = %env::args().collect::<Vec<_>>().join(" "));
+    tracing::trace!(command = %env::args().collect::<Vec<_>>().join(" "));
 
     // Load the config file into a buffer and deserialize it.
     let mut buf = String::with_capacity(2_048);
@@ -71,24 +69,20 @@ async fn run() -> util::Result<()> {
     )?;
 
     // Create the CLI app.
-    let span = tracing::debug_span!("build_app").entered();
+    let span = tracing::trace_span!("Build app").entered();
     let mut app = App::new(clap::crate_name!())
         .about(clap::crate_description!())
         .author(clap::crate_authors!())
         .version(clap::crate_version!())
         .args([
-            Arg::new("debug")
-                .about("Use debug output")
-                .long("debug")
-                .conflicts_with_all(&["info", "trace"]),
             Arg::new("info")
                 .about("Use info output")
                 .long("info")
-                .conflicts_with_all(&["debug", "trace"]),
+                .conflicts_with("trace"),
             Arg::new("trace")
                 .about("Use trace output")
                 .long("trace")
-                .conflicts_with_all(&["debug", "info"]),
+                .conflicts_with("info"),
             Arg::new("config")
                 .about("Use a custom configuration file")
                 .short('c')
@@ -96,25 +90,20 @@ async fn run() -> util::Result<()> {
         ]);
 
     // Add servers and arguments to the CLI app.
-    tracing::debug!("adding subcommands");
+    tracing::trace!("Adding subcommands");
     for (server, info) in &cfg.servers {
         app = app.subcommand(
             App::new(*server).about(info.url()).args([
                 // Hidden output level args.
-                Arg::new("debug")
-                    .about("Use debug output")
-                    .long("debug")
-                    .conflicts_with_all(&["info", "trace"])
-                    .hidden(true),
                 Arg::new("info")
                     .about("Use info output")
                     .long("info")
-                    .conflicts_with_all(&["debug", "trace"])
+                    .conflicts_with("trace")
                     .hidden(true),
                 Arg::new("trace")
                     .about("Use trace output")
                     .long("trace")
-                    .conflicts_with_all(&["debug", "info"])
+                    .conflicts_with("info")
                     .hidden(true),
                 // Required args.
                 Arg::new("DATABASE")
@@ -163,7 +152,7 @@ async fn run() -> util::Result<()> {
     drop(span);
 
     // Parse CLI arguments.
-    let span = tracing::debug_span!("parse_args").entered();
+    let span = tracing::trace_span!("parse_args").entered();
     let matches = app.get_matches();
     tracing::trace!(?matches);
     drop(span);

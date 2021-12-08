@@ -17,11 +17,11 @@ use crate::config::ServerInfo;
 use crate::util::{self, ColumnString as _};
 
 /// Dispatch a database query to an address.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 pub async fn dispatch(info: ServerInfo<'_>, matches: &ArgMatches) -> util::Result<()> {
     // Parse the database name. Unwrap is safe because the arg is required.
     let db_arg = matches.value_of("DATABASE").unwrap();
-    tracing::debug!(db_arg);
+    tracing::trace!(db_arg);
     let db = parse_db_name(db_arg);
     tracing::info!(%db);
 
@@ -63,7 +63,7 @@ fn parse_db_name(db_name: &str) -> String {
 }
 
 /// Create a `tiberius::Config` for the database client.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 fn config(info: ServerInfo<'_>, db: &str) -> tiberius::Config {
     let mut cfg = tiberius::Config::new();
 
@@ -82,7 +82,7 @@ fn config(info: ServerInfo<'_>, db: &str) -> tiberius::Config {
 }
 
 /// Create a `tiberius::Client` with a TCP connection to a database server.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 async fn build_client(info: ServerInfo<'_>, db: &str) -> util::Result<Client<Compat<TcpStream>>> {
     let cfg = config(info, db);
     let tcp = time::timeout(Duration::from_secs(3), TcpStream::connect(cfg.get_addr())).await??;
@@ -98,7 +98,7 @@ async fn build_client(info: ServerInfo<'_>, db: &str) -> util::Result<Client<Com
 }
 
 /// Execute a SELECT statement.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 async fn select(
     info: ServerInfo<'_>,
     db: &str,
@@ -126,12 +126,12 @@ async fn select(
     }
 
     let mut client = build_client(info, db).await?;
-    tracing::info!("sending query");
+    tracing::info!("Sending query");
     let res = client.query(&q, &[]).await?.into_first_result().await?;
-    tracing::info!("received response");
+    tracing::info!("Received response");
 
     if res.is_empty() {
-        return Err(Box::from("no rows returned"));
+        return Err(Box::from("No rows returned"));
     }
 
     let table: Vec<(Vec<Cell>, Vec<Cell>)> = res
@@ -148,7 +148,6 @@ async fn select(
             )
         })
         .collect();
-    tracing::trace!(?table);
 
     print_table(table);
 
@@ -171,7 +170,7 @@ fn print_table(table: Vec<(Vec<Cell>, Vec<Cell>)>) {
 }
 
 /// Execute an INSERT statement.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 async fn insert(
     _info: ServerInfo<'_>,
     _db: &str,
@@ -182,7 +181,7 @@ async fn insert(
 }
 
 /// Execute an UPDATE statement.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 async fn update(
     _info: ServerInfo<'_>,
     _db: &str,
