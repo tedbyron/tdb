@@ -3,6 +3,9 @@
 use std::time::Duration;
 
 use clap::ArgMatches;
+use comfy_table::modifiers::UTF8_ROUND_CORNERS;
+use comfy_table::presets::UTF8_BORDERS_ONLY;
+use comfy_table::{Cell, Color, ContentArrangement, Table};
 #[cfg(windows)]
 use tiberius::AuthMethod;
 use tiberius::{Client, EncryptionLevel};
@@ -11,7 +14,7 @@ use tokio::time;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 use crate::config::ServerInfo;
-use crate::util;
+use crate::util::{self, ColumnString as _};
 
 /// Dispatch a database query to an address.
 #[tracing::instrument(level = "debug", skip_all)]
@@ -67,6 +70,7 @@ fn config(info: ServerInfo<'_>, db: &str) -> tiberius::Config {
     cfg.application_name("tdb");
     #[cfg(windows)]
     cfg.authentication(AuthMethod::Integrated);
+    cfg.trust_cert(); // HACK
     cfg.encryption(EncryptionLevel::Required);
     cfg.host(info.url());
     cfg.port(info.port());
@@ -98,11 +102,72 @@ async fn build_client(info: ServerInfo<'_>, db: &str) -> util::Result<Client<Com
 async fn select(
     info: ServerInfo<'_>,
     db: &str,
-    _table: &str,
-    _matches: &ArgMatches,
+    table: &str,
+    matches: &ArgMatches,
 ) -> util::Result<()> {
-    let _client = build_client(info, db).await?;
+    let where_ = matches.value_of("WHERE");
+    let group_by = matches.value_of("GROUP_BY");
+    let order_by = matches.value_of("ORDER_BY");
+
+    let invalid = [matches.value_of("SET"), matches.value_of("VALUES")];
+    if invalid.iter().any(Option::is_some) {
+        return Err(Box::from("invalid argument")); // TODO
+    }
+
+    let mut q = format!("SELECT TOP 100 * FROM {} WITH (NOLOCK) ", table);
+    if let Some(w) = where_ {
+        q.push_str(&format!("WHERE {} ", w));
+    }
+    if let Some(g) = group_by {
+        q.push_str(&format!("GROUP BY {} ", g));
+    }
+    if let Some(o) = order_by {
+        q.push_str(&format!("ORDER BY {} ", o));
+    }
+
+    let mut client = build_client(info, db).await?;
+    tracing::info!("sending query");
+    let res = client.query(&q, &[]).await?.into_first_result().await?;
+    tracing::info!("received response");
+
+    if res.is_empty() {
+        return Err(Box::from("no rows returned"));
+    }
+
+    let table: Vec<(Vec<Cell>, Vec<Cell>)> = res
+        .into_iter()
+        .map(|row| {
+            (
+                row.columns()
+                    .iter()
+                    .map(|col| Cell::new(col.name().to_string()).fg(Color::Green))
+                    .collect(),
+                row.into_iter()
+                    .map(|col| Cell::new(col.to_string()))
+                    .collect(),
+            )
+        })
+        .collect();
+    tracing::trace!(?table);
+
+    print_table(table);
+
     Ok(())
+}
+
+fn print_table(table: Vec<(Vec<Cell>, Vec<Cell>)>) {
+    for (cols, rows) in table {
+        let mut t = Table::new();
+        t.load_preset(UTF8_BORDERS_ONLY)
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .apply_modifier(UTF8_ROUND_CORNERS);
+
+        for (col, row) in cols.into_iter().zip(rows) {
+            t.add_row(vec![col, row]);
+        }
+
+        println!("{}", t);
+    }
 }
 
 /// Execute an INSERT statement.

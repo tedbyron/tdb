@@ -1,5 +1,11 @@
 #![forbid(unsafe_code)]
-#![warn(clippy::all, clippy::pedantic, clippy::nursery, rust_2018_idioms)]
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+    rust_2018_idioms
+)]
 #![allow(clippy::too_many_lines)]
 #![doc = include_str!("../README.md")]
 #![windows_subsystem = "console"]
@@ -40,19 +46,29 @@ async fn run() -> util::Result<()> {
     }
 
     // Global tracing subscriber.
-    tracing_subscriber::fmt()
+    let sub = tracing_subscriber::fmt()
         .with_target(false) // Don't show source file names.
-        .with_ansi(true) // Support color for older Windows terminals.
         .with_timer(time::uptime()) // Use program uptime instead of system time.
-        .with_span_events(FmtSpan::ENTER | FmtSpan::CLOSE) // Show elapsed time on span exit.
-        .with_env_filter(EnvFilter::from_env("TDB_LOG")) // Filter using $TDB_LOG.
-        .init();
+        .with_span_events(FmtSpan::CLOSE) // Show elapsed time on span exit.
+        .with_env_filter(EnvFilter::from_env("TDB_LOG")); // Filter using $TDB_LOG.
+    #[cfg(feature = "ansi")]
+    let sub = sub.with_ansi(true); // Support color for Windows terminals.
+    sub.init();
+
     // https://github.com/rust-lang/rust/issues/79524
     tracing::debug!(command = %env::args().collect::<Vec<_>>().join(" "));
 
     // Load the config file into a buffer and deserialize it.
     let mut buf = String::with_capacity(2_048);
-    let cfg = config::load("tdb.toml", &mut buf)?;
+    let mut path = env::current_exe()?;
+    path.pop();
+    path.push("tdb.toml");
+    let cfg = config::load(
+        path.as_path()
+            .to_str()
+            .ok_or("path to tdb.toml is not valid unicode")?,
+        &mut buf,
+    )?;
 
     // Create the CLI app.
     let span = tracing::debug_span!("build_app").entered();
@@ -116,30 +132,30 @@ async fn run() -> util::Result<()> {
                     .required(true)
                     .takes_value(true),
                 // Optional args.
-                Arg::new("WHERE")
-                    .about("A WHERE clause")
-                    .short('w')
-                    .long("where")
-                    .takes_value(true),
                 Arg::new("SET")
                     .about("A SET clause")
                     .short('s')
                     .long("set")
+                    .takes_value(true),
+                Arg::new("WHERE")
+                    .about("A WHERE clause")
+                    .short('w')
+                    .long("where")
                     .takes_value(true),
                 Arg::new("VALUES")
                     .about("A VALUES clause")
                     .short('v')
                     .long("values")
                     .takes_value(true),
-                Arg::new("ORDER_BY")
-                    .about("An ORDER BY clause")
-                    .short('o')
-                    .long("order-by")
-                    .takes_value(true),
                 Arg::new("GROUP_BY")
                     .about("A GROUP BY clause")
                     .short('g')
                     .long("group-by")
+                    .takes_value(true),
+                Arg::new("ORDER_BY")
+                    .about("An ORDER BY clause")
+                    .short('o')
+                    .long("order-by")
                     .takes_value(true),
             ]),
         );

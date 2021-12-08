@@ -5,7 +5,7 @@
 # server names will be used as subcommands for the CLI.
 [Servers]
 # Uses default port 1433
-example = 'example.com'
+dev-east = 'talissqldev.eastus.cloudapp.azure.com'
 # Manually specify port number
 example-port = { url = 'example.com', port = 1434 }
 

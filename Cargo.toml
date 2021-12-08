@@ -9,11 +9,12 @@ readme = "README.md"
 
 [dependencies]
 toml = "0.5.8"
-tiberius = { version = "0.6.5", features = ["sql-browser-tokio"] }
+tiberius = { version = "0.6.5", features = ["sql-browser-tokio", "chrono"] }
 tracing = "0.1.29"
 tokio = { version = "1.14.0", features = ["rt", "macros", "net", "time", "parking_lot"] }
 tokio-util = { version = "0.6.9", features = ["compat"] }
 serde = { version = "1.0.130", features = ["derive"] }
+comfy-table = "5.0.0"
 
 [dependencies.clap]
 version = "3.0.0-beta.5"
@@ -26,6 +27,8 @@ default-features = false
 features = ["std", "env-filter", "fmt", "ansi", "parking_lot"]
 
 [features]
+default = ["ansi"]
+ansi = []
 
 [profile.release]
 lto = "fat"

@@ -5,17 +5,31 @@
 
 ## About
 
-1. **All network traffic is encrypted** using the native Windows TLS implementation (Schannel).
+1. **All network traffic is encrypted** using the native Windows TLS implementation (Schannel). The source code uses `tiberius::EncryptionLevel::Required` which will cause the application to exit if any traffic fails to encrypt.
 
-2. **Queries are only checked by the database**.
+2. **Queries are only checked by the database**, no inputs are sanitized.
 
 3. **No network connections are pooled** because the lifetime of this application begins and ends on the command prompt.
 
-4. Authentication is performed using Windows authentication (SSPI).
+4. Database authentication is performed using Windows authentication (SSPI).
 
 5. All network connections currently use TCP/IP. Support for named pipes instead of TCP/IP may be implemented in the future.
 
 6. Exact ports must be specified or else the program will attempt to use a default port of `1433`.
+
+7. Rust does not have a `null` type, so SQL `NULL` values will be represented by default Rust values:
+
+   |  SQL Type      | Rust Type       | Default Value                            |
+   |----------------|-----------------|------------------------------------------|
+   | Number         | *various*       | `0`                                      |
+   | Bit            | `bool`          | `false`                                  |
+   | String         | `&str`          | `""`                                     |
+   | GUID           | `Uuid`          | `"00000000-0000-0000-0000-000000000000"` |
+   | Binary         | `[u8]`          | `"[]"`                                   |
+   | DateTime       | `NaiveDateTime` | `"1970-01-01 00:00:00"`                  |
+   | Date           | `NaiveDate`     | `"1970-01-01"`                           |
+   | Time           | `NaiveTime`     | `"00:00:00"`                             |
+   | DateTimeOffset | `DateTime`      | `"1970-01-01 00:00:00 UTC"`              |
 
 ## Help
 

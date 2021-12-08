@@ -41,7 +41,7 @@ impl ServerInfo<'_> {
         }
     }
 
-    /// Get the server port.
+    /// Get the server port, or the default port (1433).
     pub const fn port(&self) -> u16 {
         match self {
             ServerInfo::Tuple(_) => default_port(),
